@@ -2,7 +2,7 @@
 " Filename: autoload/term.vim
 " Author: itchyny
 " License: MIT License
-" Last Change: 2017/11/07 21:17:22.
+" Last Change: 2017/11/07 21:18:28.
 " =============================================================================
 
 let s:save_cpo = &cpo
@@ -50,7 +50,7 @@ function! s:build_term_args(args) abort
 endfunction
 
 function! term#complete(arglead, cmdline, cursorpos) abort
-  return sort(filter(copy(s:default_options), 'stridx(v:val, a:arglead) != -1'))
+  return sort(filter(copy(s:default_options) + copy(s:custom_options), 'stridx(v:val, a:arglead) != -1'))
 endfunction
 
 let &cpo = s:save_cpo
