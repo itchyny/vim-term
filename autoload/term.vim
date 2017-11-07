@@ -2,7 +2,7 @@
 " Filename: autoload/term.vim
 " Author: itchyny
 " License: MIT License
-" Last Change: 2017/11/07 23:08:55.
+" Last Change: 2017/11/08 06:09:29.
 " =============================================================================
 
 let s:save_cpo = &cpo
@@ -102,16 +102,25 @@ function! s:term.restore() dict abort
 endfunction
 
 function! s:term.autocd() dict abort
-  let nr = bufnr('')
-  let last_line = term_getline(nr, term_getcursor(nr)[0])
-  if len(last_line) >= term_getsize(nr)[1] - 3
-    let last_line = substitute(last_line, '\v\S+  *$', '', 'g')
-  endif
-  let maybe_dir = resolve(expand(matchstr(last_line, '\v^.*\S+\ze *$')))
+  let bufnr = bufnr('')
+  let maybe_dir = self.get_job_cwd(term_getjob(bufnr))
   if isdirectory(maybe_dir) && self.current_dir !=# maybe_dir
     let dir = fnamemodify(self.current_dir, ':~')
-    call term_sendkeys(nr, 'cd ' . fnameescape(dir) . "\<CR>")
+    call term_sendkeys(bufnr, 'cd ' . fnameescape(dir) . "\<CR>")
   endif
+endfunction
+
+function! s:term.get_job_cwd(job) dict abort
+  let job_info = job_info(a:job)
+  let out = split(system('lsof -a -p ' . job_info.process . ' -d cwd'), '\n')
+  if len(out) != 2
+    return ''
+  endif
+  let i = match(out[0], 'NAME')
+  if i < 0
+    return ''
+  endif
+  return out[1][i:]
 endfunction
 
 function! term#complete(arglead, cmdline, cursorpos) abort
