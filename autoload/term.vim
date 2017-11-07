@@ -2,7 +2,7 @@
 " Filename: autoload/term.vim
 " Author: itchyny
 " License: MIT License
-" Last Change: 2017/11/07 21:33:15.
+" Last Change: 2017/11/07 21:39:54.
 " =============================================================================
 
 let s:save_cpo = &cpo
@@ -22,7 +22,7 @@ function! term#new(...) abort
     call s:restore_term(term_flags, custom_flags)
   else
     execute get(custom_flags, 'opener', '')
-    execute 'terminal' s:build_term_flags(term_flags)
+    execute 'terminal' s:build_term_flags(term_flags, custom_flags)
   endif
 endfunction
 
@@ -49,8 +49,12 @@ function! s:parse_cmdargs(args) abort
   return [term_flags, custom_flags]
 endfunction
 
-function! s:build_term_flags(args) abort
-  return join(map(keys(a:args), '"++" . (a:args[v:val] == v:true ? v:val : v:val . "=" . a:args[v:val])'), ' ')
+function! s:build_term_flags(term_flags, custom_flags) abort
+  let args = a:term_flags
+  if get(a:custom_flags, 'opener', '') !=# ''
+    let args['curwin'] = v:true
+  endif
+  return join(map(keys(args), '"++" . (args[v:val] == v:true ? v:val : v:val . "=" . args[v:val])'), ' ')
 endfunction
 
 function! s:restore_term(term_flags, custom_flags) abort
@@ -63,7 +67,7 @@ function! s:restore_term(term_flags, custom_flags) abort
   if &buftype !=# 'terminal'
     execute get(a:custom_flags, 'opener', '')
     if empty(term_list())
-      execute 'terminal' s:build_term_flags(a:term_flags)
+      execute 'terminal' s:build_term_flags(a:term_flags, a:custom_flags)
     else
       execute 'buffer' term_list()[0]
     endif
