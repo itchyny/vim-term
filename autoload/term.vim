@@ -2,7 +2,7 @@
 " Filename: autoload/term.vim
 " Author: itchyny
 " License: MIT License
-" Last Change: 2017/11/07 22:13:20.
+" Last Change: 2017/11/07 23:08:55.
 " =============================================================================
 
 let s:save_cpo = &cpo
@@ -104,7 +104,10 @@ endfunction
 function! s:term.autocd() dict abort
   let nr = bufnr('')
   let last_line = term_getline(nr, term_getcursor(nr)[0])
-  let maybe_dir = resolve(expand(matchstr(last_line, '^.*\S\+\ze *$')))
+  if len(last_line) >= term_getsize(nr)[1] - 3
+    let last_line = substitute(last_line, '\v\S+  *$', '', 'g')
+  endif
+  let maybe_dir = resolve(expand(matchstr(last_line, '\v^.*\S+\ze *$')))
   if isdirectory(maybe_dir) && self.current_dir !=# maybe_dir
     let dir = fnamemodify(self.current_dir, ':~')
     call term_sendkeys(nr, 'cd ' . fnameescape(dir) . "\<CR>")
