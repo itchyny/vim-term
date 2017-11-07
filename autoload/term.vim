@@ -2,7 +2,7 @@
 " Filename: autoload/term.vim
 " Author: itchyny
 " License: MIT License
-" Last Change: 2017/11/07 22:09:30.
+" Last Change: 2017/11/07 22:13:20.
 " =============================================================================
 
 let s:save_cpo = &cpo
@@ -23,10 +23,11 @@ endfunction
 let s:term = {}
 
 function! s:new_term(args) abort
-  let [term_flags, custom_flags] = s:parse_cmdargs(a:args)
+  let [term_flags, custom_flags, args] = s:parse_cmdargs(a:args)
   return extend(copy(s:term), {
         \ 'term_flags': term_flags,
         \ 'custom_flags': custom_flags,
+        \ 'args': args,
         \ 'current_dir': expand('%:p:h'),
         \ })
 endfunction
@@ -34,15 +35,20 @@ endfunction
 function! s:parse_cmdargs(args) abort
   let term_flags = {}
   let custom_flags = {}
+  let args = []
   for arg in a:args
-    let [key, val] = s:normalize_cmdarg(arg)
-    if s:is_default_flags(key)
-      let term_flags[key] = val
+    if arg[0] ==# '-'
+      let [key, val] = s:normalize_cmdarg(arg)
+      if s:is_default_flags(key)
+        let term_flags[key] = val
+      else
+        let custom_flags[key] = val
+      endif
     else
-      let custom_flags[key] = val
+      call add(args, arg)
     endif
   endfor
-  return [term_flags, custom_flags]
+  return [term_flags, custom_flags, args]
 endfunction
 
 function! s:normalize_cmdarg(arg) abort
@@ -59,7 +65,7 @@ function! s:term.exec() dict abort
     call self.restore()
   else
     execute get(self.custom_flags, 'opener', '')
-    execute 'terminal' self.build_term_flags()
+    call self.invoke()
   endif
   if get(self.custom_flags, 'autocd', v:false)
     call self.autocd()
@@ -74,6 +80,10 @@ function! s:term.build_term_flags() dict abort
   return join(map(keys(args), '"++" . (args[v:val] == v:true ? v:val : v:val . "=" . args[v:val])'), ' ')
 endfunction
 
+function! s:term.invoke() dict abort
+  execute 'terminal' self.build_term_flags() join(self.args, ' ')
+endfunction
+
 function! s:term.restore() dict abort
   for nr in range(1, winnr('$'))
     if getbufvar(winbufnr(nr), '&buftype') ==# 'terminal'
@@ -84,7 +94,7 @@ function! s:term.restore() dict abort
   if &buftype !=# 'terminal'
     execute get(self.custom_flags, 'opener', '')
     if empty(term_list())
-      execute 'terminal' self.build_term_flags()
+      call self.invoke()
     else
       execute 'buffer' term_list()[0]
     endif
