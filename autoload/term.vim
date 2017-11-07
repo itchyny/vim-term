@@ -2,7 +2,7 @@
 " Filename: autoload/term.vim
 " Author: itchyny
 " License: MIT License
-" Last Change: 2017/11/08 06:09:29.
+" Last Change: 2017/11/08 06:38:13.
 " =============================================================================
 
 let s:save_cpo = &cpo
@@ -103,10 +103,15 @@ endfunction
 
 function! s:term.autocd() dict abort
   let bufnr = bufnr('')
-  let maybe_dir = self.get_job_cwd(term_getjob(bufnr))
+  let job = term_getjob(bufnr)
+  let maybe_dir = self.get_job_cwd(job)
   if isdirectory(maybe_dir) && self.current_dir !=# maybe_dir
-    let dir = fnamemodify(self.current_dir, ':~')
-    call term_sendkeys(bufnr, 'cd ' . fnameescape(dir) . "\<CR>")
+    let pproc = self.get_job_process(job)
+    let procs = self.get_job_child_processes(job)
+    if empty(filter(procs, 'v:val.command !=# pproc.command'))
+      let dir = fnamemodify(self.current_dir, ':~')
+      call term_sendkeys(bufnr, 'cd ' . fnameescape(dir) . "\<CR>")
+    endif
   endif
 endfunction
 
@@ -121,6 +126,29 @@ function! s:term.get_job_cwd(job) dict abort
     return ''
   endif
   return out[1][i:]
+endfunction
+
+function! s:term.get_job_process(job) dict abort
+  let job_info = job_info(a:job)
+  let out = system("ps -o pid=,comm= -p " . job_info.process)
+  for line in split(out, '\n')
+    let pid = matchstr(line, '^\d\+')
+    let comm = matchstr(line, '^\d\+ \+\zs.*')
+    return { 'pid': pid, 'command': comm }
+  endfor
+  return { 'pid': -1, 'command': '' }
+endfunction
+
+function! s:term.get_job_child_processes(job) dict abort
+  let job_info = job_info(a:job)
+  let out = system("ps -o ppid=,pid=,comm= | awk '$1 == " . job_info.process . "{print $2,$3}'")
+  let processes = []
+  for line in split(out, '\n')
+    let pid = matchstr(line, '^\d\+')
+    let comm = matchstr(line, '^\d\+ \+\zs.*')
+    call add(processes, { 'pid': pid, 'command': comm })
+  endfor
+  return processes
 endfunction
 
 function! term#complete(arglead, cmdline, cursorpos) abort
