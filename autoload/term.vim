@@ -2,7 +2,7 @@
 " Filename: autoload/term.vim
 " Author: itchyny
 " License: MIT License
-" Last Change: 2017/11/07 21:50:46.
+" Last Change: 2017/11/07 22:09:30.
 " =============================================================================
 
 let s:save_cpo = &cpo
@@ -13,7 +13,7 @@ let s:default_flags = [
       \ ]
 
 let s:custom_flags = [
-      \ '-opener=', '-restore'
+      \ '-opener=', '-restore', '-autocd'
       \ ]
 
 function! term#new(...) abort
@@ -24,7 +24,11 @@ let s:term = {}
 
 function! s:new_term(args) abort
   let [term_flags, custom_flags] = s:parse_cmdargs(a:args)
-  return extend(copy(s:term), { 'term_flags': term_flags, 'custom_flags': custom_flags })
+  return extend(copy(s:term), {
+        \ 'term_flags': term_flags,
+        \ 'custom_flags': custom_flags,
+        \ 'current_dir': expand('%:p:h'),
+        \ })
 endfunction
 
 function! s:parse_cmdargs(args) abort
@@ -57,6 +61,9 @@ function! s:term.exec() dict abort
     execute get(self.custom_flags, 'opener', '')
     execute 'terminal' self.build_term_flags()
   endif
+  if get(self.custom_flags, 'autocd', v:false)
+    call self.autocd()
+  endif
 endfunction
 
 function! s:term.build_term_flags() dict abort
@@ -81,6 +88,16 @@ function! s:term.restore() dict abort
     else
       execute 'buffer' term_list()[0]
     endif
+  endif
+endfunction
+
+function! s:term.autocd() dict abort
+  let nr = bufnr('')
+  let last_line = term_getline(nr, term_getcursor(nr)[0])
+  let maybe_dir = resolve(expand(matchstr(last_line, '^.*\S\+\ze *$')))
+  if isdirectory(maybe_dir) && self.current_dir !=# maybe_dir
+    let dir = fnamemodify(self.current_dir, ':~')
+    call term_sendkeys(nr, 'cd ' . fnameescape(dir) . "\<CR>")
   endif
 endfunction
 
