@@ -2,7 +2,7 @@
 " Filename: autoload/term.vim
 " Author: itchyny
 " License: MIT License
-" Last Change: 2017/11/08 06:38:13.
+" Last Change: 2017/11/08 06:45:51.
 " =============================================================================
 
 let s:save_cpo = &cpo
@@ -103,11 +103,11 @@ endfunction
 
 function! s:term.autocd() dict abort
   let bufnr = bufnr('')
-  let job = term_getjob(bufnr)
-  let maybe_dir = self.get_job_cwd(job)
+  let pid = job_info(term_getjob(bufnr)).process
+  let maybe_dir = self.get_job_cwd(pid)
   if isdirectory(maybe_dir) && self.current_dir !=# maybe_dir
-    let pproc = self.get_job_process(job)
-    let procs = self.get_job_child_processes(job)
+    let pproc = self.get_job_process(pid)
+    let procs = self.get_job_child_processes(pid)
     if empty(filter(procs, 'v:val.command !=# pproc.command'))
       let dir = fnamemodify(self.current_dir, ':~')
       call term_sendkeys(bufnr, 'cd ' . fnameescape(dir) . "\<CR>")
@@ -115,9 +115,8 @@ function! s:term.autocd() dict abort
   endif
 endfunction
 
-function! s:term.get_job_cwd(job) dict abort
-  let job_info = job_info(a:job)
-  let out = split(system('lsof -a -p ' . job_info.process . ' -d cwd'), '\n')
+function! s:term.get_job_cwd(pid) dict abort
+  let out = split(system('lsof -a -p ' . a:pid . ' -d cwd'), '\n')
   if len(out) != 2
     return ''
   endif
@@ -128,9 +127,8 @@ function! s:term.get_job_cwd(job) dict abort
   return out[1][i:]
 endfunction
 
-function! s:term.get_job_process(job) dict abort
-  let job_info = job_info(a:job)
-  let out = system("ps -o pid=,comm= -p " . job_info.process)
+function! s:term.get_job_process(pid) dict abort
+  let out = system("ps -o pid=,comm= -p " . a:pid)
   for line in split(out, '\n')
     let pid = matchstr(line, '^\d\+')
     let comm = matchstr(line, '^\d\+ \+\zs.*')
@@ -139,9 +137,8 @@ function! s:term.get_job_process(job) dict abort
   return { 'pid': -1, 'command': '' }
 endfunction
 
-function! s:term.get_job_child_processes(job) dict abort
-  let job_info = job_info(a:job)
-  let out = system("ps -o ppid=,pid=,comm= | awk '$1 == " . job_info.process . "{print $2,$3}'")
+function! s:term.get_job_child_processes(pid) dict abort
+  let out = system("ps -o ppid=,pid=,comm= | awk '$1 == " . a:pid . "{print $2,$3}'")
   let processes = []
   for line in split(out, '\n')
     let pid = matchstr(line, '^\d\+')
