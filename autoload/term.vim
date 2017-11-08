@@ -2,7 +2,7 @@
 " Filename: autoload/term.vim
 " Author: itchyny
 " License: MIT License
-" Last Change: 2017/11/08 06:45:51.
+" Last Change: 2017/11/08 20:37:18.
 " =============================================================================
 
 let s:save_cpo = &cpo
@@ -110,7 +110,7 @@ function! s:term.autocd() dict abort
     let procs = self.get_job_child_processes(pid)
     if empty(filter(procs, 'v:val.command !=# pproc.command'))
       let dir = fnamemodify(self.current_dir, ':~')
-      call term_sendkeys(bufnr, 'cd ' . fnameescape(dir) . "\<CR>")
+      call term_sendkeys(bufnr, "\<C-u>cd " . fnameescape(dir) . "\<CR>")
     endif
   endif
 endfunction
