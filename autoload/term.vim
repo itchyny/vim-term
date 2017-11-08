@@ -2,7 +2,7 @@
 " Filename: autoload/term.vim
 " Author: itchyny
 " License: MIT License
-" Last Change: 2017/11/08 20:37:18.
+" Last Change: 2017/11/08 21:24:30.
 " =============================================================================
 
 let s:save_cpo = &cpo
@@ -106,9 +106,17 @@ function! s:term.autocd() dict abort
   let pid = job_info(term_getjob(bufnr)).process
   let maybe_dir = self.get_job_cwd(pid)
   if isdirectory(maybe_dir) && self.current_dir !=# maybe_dir
-    let pproc = self.get_job_process(pid)
-    let procs = self.get_job_child_processes(pid)
-    if empty(filter(procs, 'v:val.command !=# pproc.command'))
+    let procs = self.get_procs()
+    let command = ''
+    let child_commands = []
+    for proc in procs
+      if proc.pid ==# pid
+        let command = proc.command
+      elseif proc.ppid ==# pid
+        call add(child_commands, proc.command)
+      endif
+    endfor
+    if empty(filter(child_commands, 'v:val !=# command'))
       let dir = fnamemodify(self.current_dir, ':~')
       call term_sendkeys(bufnr, "\<C-u>cd " . fnameescape(dir) . "\<CR>")
     endif
@@ -127,25 +135,17 @@ function! s:term.get_job_cwd(pid) dict abort
   return out[1][i:]
 endfunction
 
-function! s:term.get_job_process(pid) dict abort
-  let out = system("ps -o pid=,comm= -p " . a:pid)
+function! s:term.get_procs() dict abort
+  let out = system('ps -o ppid,pid,comm')
+  let procs = []
   for line in split(out, '\n')
-    let pid = matchstr(line, '^\d\+')
-    let comm = matchstr(line, '^\d\+ \+\zs.*')
-    return { 'pid': pid, 'command': comm }
+    let m = matchlist(line, '\v^(\d+) +(\d+) +(.*)')
+    echom string(m)
+    if len(m) > 3
+      call add(procs, { 'ppid': m[1], 'pid': m[2], 'command': m[3] })
+    endif
   endfor
-  return { 'pid': -1, 'command': '' }
-endfunction
-
-function! s:term.get_job_child_processes(pid) dict abort
-  let out = system("ps -o ppid=,pid=,comm= | awk '$1 == " . a:pid . "{print $2,$3}'")
-  let processes = []
-  for line in split(out, '\n')
-    let pid = matchstr(line, '^\d\+')
-    let comm = matchstr(line, '^\d\+ \+\zs.*')
-    call add(processes, { 'pid': pid, 'command': comm })
-  endfor
-  return processes
+  return procs
 endfunction
 
 function! term#complete(arglead, cmdline, cursorpos) abort
