@@ -2,7 +2,7 @@
 " Filename: autoload/term.vim
 " Author: itchyny
 " License: MIT License
-" Last Change: 2017/11/10 09:26:39.
+" Last Change: 2017/11/11 05:49:51.
 " =============================================================================
 
 let s:save_cpo = &cpo
@@ -139,7 +139,7 @@ function! s:term.get_procs() dict abort
   let out = system('ps -o ppid,pid,comm')
   let procs = []
   for line in split(out, '\n')
-    let m = matchlist(line, '\v^(\d+) +(\d+) +(.*)')
+    let m = matchlist(line, '\v^\s*(\d+) +(\d+) +(.*)')
     if len(m) > 3
       call add(procs, { 'ppid': m[1], 'pid': m[2], 'command': m[3] })
     endif
