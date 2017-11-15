@@ -2,7 +2,7 @@
 " Filename: autoload/term.vim
 " Author: itchyny
 " License: MIT License
-" Last Change: 2017/11/11 05:49:51.
+" Last Change: 2017/11/15 12:05:15.
 " =============================================================================
 
 let s:save_cpo = &cpo
@@ -118,7 +118,7 @@ function! s:term.autocd() dict abort
     endfor
     if empty(filter(child_commands, 'v:val !=# command'))
       let dir = fnamemodify(self.current_dir, ':~')
-      call term_sendkeys(bufnr, "\<C-u>cd " . fnameescape(dir) . "\<CR>")
+      call term_sendkeys(bufnr, "\<C-k>cd " . fnameescape(dir) . "\<CR>")
     endif
   endif
 endfunction
