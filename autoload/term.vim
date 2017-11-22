@@ -2,7 +2,7 @@
 " Filename: autoload/term.vim
 " Author: itchyny
 " License: MIT License
-" Last Change: 2017/11/15 12:05:15.
+" Last Change: 2017/11/22 09:23:40.
 " =============================================================================
 
 let s:save_cpo = &cpo
@@ -41,8 +41,10 @@ function! s:parse_cmdargs(args) abort
       let [key, val] = s:normalize_cmdarg(arg)
       if s:is_default_flags(key)
         let term_flags[key] = val
-      else
+      elseif s:is_custom_flags(key)
         let custom_flags[key] = val
+      else
+        call add(args, arg)
       endif
     else
       call add(args, arg)
@@ -58,6 +60,10 @@ endfunction
 
 function! s:is_default_flags(key) abort
   return !empty(filter(copy(s:default_flags), 'v:val =~# "^-\\+" . a:key'))
+endfunction
+
+function! s:is_custom_flags(key) abort
+  return !empty(filter(copy(s:custom_flags), 'v:val =~# "^-\\+" . a:key'))
 endfunction
 
 function! s:term.exec() dict abort
