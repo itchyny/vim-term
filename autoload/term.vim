@@ -2,7 +2,7 @@
 " Filename: autoload/term.vim
 " Author: itchyny
 " License: MIT License
-" Last Change: 2017/11/22 09:23:40.
+" Last Change: 2019/08/15 15:02:08.
 " =============================================================================
 
 let s:save_cpo = &cpo
@@ -13,7 +13,7 @@ let s:default_flags = [
       \ ]
 
 let s:custom_flags = [
-      \ '-opener=', '-restore', '-autocd'
+      \ '-opener=', '-restore', '-autocd', '-reporoot',
       \ ]
 
 function! term#new(...) abort
@@ -87,24 +87,42 @@ function! s:term.build_term_flags() dict abort
 endfunction
 
 function! s:term.invoke() dict abort
+  if get(self.custom_flags, 'reporoot', v:false)
+    let git_root = s:git_root(expand('%:p:h'))
+    if git_root != ''
+      execute 'lcd' git_root
+    endif
+  endif
   execute 'terminal' self.build_term_flags() join(self.args, ' ')
 endfunction
 
 function! s:term.restore() dict abort
-  for nr in range(1, winnr('$'))
-    if getbufvar(winbufnr(nr), '&buftype') ==# 'terminal'
-      execute nr 'wincmd w'
-      break
+  for winnr in range(1, winnr('$'))
+    let bufnr = winbufnr(winnr)
+    if getbufvar(bufnr, '&buftype') ==# 'terminal' && self.match_reporoot(bufnr)
+      execute winnr 'wincmd w'
+      return
     endif
   endfor
-  if &buftype !=# 'terminal'
-    execute get(self.custom_flags, 'opener', '')
-    if empty(term_list())
-      call self.invoke()
-    else
-      execute 'buffer' term_list()[0]
+  for bufnr in term_list()
+    if self.match_reporoot(bufnr)
+      execute get(self.custom_flags, 'opener', 'new')
+      execute 'buffer' bufnr
+      return
     endif
+  endfor
+  execute get(self.custom_flags, 'opener', '')
+  call self.invoke()
+endfunction
+
+function! s:term.match_reporoot(bufnr) dict abort
+  if !get(self.custom_flags, 'reporoot', v:false)
+    return 1
   endif
+  let git_root = s:git_root(expand('%:p:h'))
+  let pid = job_info(term_getjob(a:bufnr)).process
+  let maybe_dir = self.get_job_cwd(pid)
+  return git_root ==# maybe_dir || git_root ==# '' && maybe_dir ==# expand('%:p:h')
 endfunction
 
 function! s:term.autocd() dict abort
@@ -151,6 +169,19 @@ function! s:term.get_procs() dict abort
     endif
   endfor
   return procs
+endfunction
+
+function! s:git_root(path) abort
+  let path = a:path
+  let prev = ''
+  while path !=# prev
+    if getftype(path . '/.git') !=# ''
+      return path
+    endif
+    let prev = path
+    let path = fnamemodify(path, ':h')
+  endwhile
+  return ''
 endfunction
 
 function! term#complete(arglead, cmdline, cursorpos) abort
