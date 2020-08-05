@@ -2,7 +2,7 @@
 " Filename: autoload/term.vim
 " Author: itchyny
 " License: MIT License
-" Last Change: 2019/08/15 15:02:08.
+" Last Change: 2020/08/05 11:31:15.
 " =============================================================================
 
 let s:save_cpo = &cpo
@@ -122,7 +122,7 @@ function! s:term.match_reporoot(bufnr) dict abort
   let git_root = s:git_root(expand('%:p:h'))
   let pid = job_info(term_getjob(a:bufnr)).process
   let maybe_dir = self.get_job_cwd(pid)
-  return git_root ==# maybe_dir || git_root ==# '' && maybe_dir ==# expand('%:p:h')
+  return stridx(maybe_dir, git_root) == 0 || git_root ==# '' && maybe_dir ==# expand('%:p:h')
 endfunction
 
 function! s:term.autocd() dict abort
