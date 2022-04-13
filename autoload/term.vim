@@ -2,14 +2,15 @@
 " Filename: autoload/term.vim
 " Author: itchyny
 " License: MIT License
-" Last Change: 2020/11/21 10:43:36.
+" Last Change: 2022/04/13 10:03:31.
 " =============================================================================
 
 let s:save_cpo = &cpo
 set cpo&vim
 
 let s:default_flags = [
-      \ '-close', '-open', '-curwin', '-hidden', '-rows=', '-cols', '-eof'
+      \ '-close', '-noclose', '-open', '-curwin', '-hidden', '-norestore',
+      \ '-shell', '-kill=', '-rows=', '-cols=', '-eof=', '-type=', '-api=',
       \ ]
 
 let s:custom_flags = [
